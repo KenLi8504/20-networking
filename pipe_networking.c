@@ -10,32 +10,29 @@
   =========================*/
 int server_handshake(int *to_client) {
 
-  int from_client = 0;
+    //0
+    int well_known_pipe = mkfifo(WKP, 0644);
 
-  //(0)
-  char *well_known_pipe = "Hey I'm Famous";
-  int wellknownpipe = mkfifo(well_known_pipe,0644);
 
-  //(4)
-  char *secret_pipe_PID;
-  int fromChild = open(well_known_pipe,O_RDONLY);
-  read(fromChild,secret_pipe_PID,8);
-  //printf("The pid of the client is %s\n",secret_pipe_PID);
-  remove(well_known_pipe);
+    //4
+    int from_client = open(WKP, O_RDONLY);
+    char clientPID[HANDSHAKE_BUFFER_SIZE];
+    int readforSecretPipe = read(from_client, clientPID, HANDSHAKE_BUFFER_SIZE);
+    remove(WKP);
 
-  //(5)
-  *to_client = open(secret_pipe_PID,O_WRONLY);
-  write(*to_client,ACK,sizeof(ACK));
+    //5
+    *to_client = open(clientPID, O_WRONLY);
+    int writeAcknowledgement = write(*to_client, ACK, sizeof(ACK));
 
-  read(fromChild,secret_pipe_PID,strlen(secret_pipe_PID));
-  if (strcmp(secret_pipe_PID,ACK) == 0){
-    printf("There are no errors POG :)\n");
-  }
-  else{
-    printf("RUH ROH!\n");
-  }
+    int checkAcknowledgement = read(from_client, clientPID, sizeof(clientPID));
 
-  return from_client;
+    if (strcmp(clientPID, ACK) == 0){
+        printf("There are no errors POG :)\n");
+    }
+    else{
+        printf("RUH ROH!\n");
+    }
+    return from_client;
 }
 
 
@@ -47,26 +44,25 @@ int server_handshake(int *to_client) {
   returns the file descriptor for the downstream pipe.
   =========================*/
 int client_handshake(int *to_server) {
-  int from_server = 0;
-  char *well_known_pipe = "Hey I'm Famous";
 
-  //(1)
-  char pid_pointer[1000];
-  sprintf(pid_pointer, "%d", getpid());
-  mkfifo(pid_pointer, 0644);
+    char clientPID[1000];
+    sprintf(clientPID, "%d", getpid());
 
-  //(2 and 3)
-  *to_server = open(well_known_pipe,O_WRONLY);
-  write(*to_server,pid_pointer,strlen(pid_pointer));
+    //1
+    mkfifo(clientPID, 0644);
 
+    //2
+    *to_server = open(WKP, O_WRONLY);
+    int send_secret_pipe_to_server = write(*to_server, clientPID, HANDSHAKE_BUFFER_SIZE);
 
-  //(6)
-  int fromServer = open(pid_pointer, O_RDONLY);
-  char * clientMessage;
-  read(fromServer,clientMessage,8);
-  remove(pid_pointer);
+    //3
+    int from_server = open(clientPID, O_RDONLY);
 
-  //(7)
-  write(*to_server,ACK,sizeof(ACK));
-  return from_server;
+    //6
+    char acknowledgement[HANDSHAKE_BUFFER_SIZE];
+    int receiveAcknowledgement = read(from_server, acknowledgement, HANDSHAKE_BUFFER_SIZE);
+    remove(clientPID);
+
+    int returnAcknowledgement = write(*to_server, ACK, sizeof(ACK));
+
 }
