@@ -11,11 +11,13 @@
 int server_handshake(int *to_client) {
   int from_client = 0;
   char *well_known_pipe = "Hey I'm Famous";
-  int pipeto = open(well_known_pipe,O_RDONLY);
-  int *client_PID;
-  read(pipeto,client_PID,8);
-  printf("The PID of the client is %d",*client_PID);
-  //remove(well_known_pipe);
+  int wellknownpipe = mkfifo(well_known_pipe,0644);
+  char *secret_pipe_PID;
+  int fromChild = open(well_known_pipe,O_RDONLY);
+  read(fromChild,secret_pipe_PID,8);
+
+  printf("The pid of the client is %s\n",secret_pipe_PID);
+
   return from_client;
 }
 
@@ -30,7 +32,17 @@ int server_handshake(int *to_client) {
 int client_handshake(int *to_server) {
   int from_server = 0;
   char *well_known_pipe = "Hey I'm Famous";
-  int pipeto = open(well_known_pipe,O_WRONLY);
-  write(pipeto,to_server,sizeof(to_server));
+  int wellknownpipe = mkfifo(well_known_pipe,0644);
+
+  char * pid_pointer;
+  int pid = getpid();
+  char pointer = (char)pid;
+  strcpy(pid_pointer,&pointer);
+  int toServer = open(well_known_pipe,O_WRONLY);
+  write(toServer,pid_pointer,strlen(pid_pointer));
+
+ //int private_pipe = mkfifo(pointer,0644);
+
+  //mkfifo(pid,0644);
   return from_server;
 }
