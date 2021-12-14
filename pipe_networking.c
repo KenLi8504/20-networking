@@ -10,13 +10,26 @@
   =========================*/
 int server_handshake(int *to_client) {
   int from_client = 0;
+
   char *well_known_pipe = "Hey I'm Famous";
   int wellknownpipe = mkfifo(well_known_pipe,0644);
   char *secret_pipe_PID;
   int fromChild = open(well_known_pipe,O_RDONLY);
   read(fromChild,secret_pipe_PID,8);
 
-  printf("The pid of the client is %s\n",secret_pipe_PID);
+  //printf("The pid of the client is %s\n",secret_pipe_PID);
+  remove(well_known_pipe);
+
+  *to_client = open(secret_pipe_PID,O_WRONLY);
+  write(*to_client,ACK,sizeof(ACK));
+
+  read(fromChild,secret_pipe_PID,strlen(secret_pipe_PID));
+  if (strcmp(secret_pipe_PID,ACK) == 0){
+    printf("There are no errors POG :)\n");
+  }
+  else{
+    printf("RUH ROH!\n");
+  }
 
   return from_client;
 }
@@ -32,17 +45,22 @@ int server_handshake(int *to_client) {
 int client_handshake(int *to_server) {
   int from_server = 0;
   char *well_known_pipe = "Hey I'm Famous";
-  int wellknownpipe = mkfifo(well_known_pipe,0644);
 
   char * pid_pointer;
   int pid = getpid();
   char pointer = (char)pid;
   strcpy(pid_pointer,&pointer);
-  int toServer = open(well_known_pipe,O_WRONLY);
-  write(toServer,pid_pointer,strlen(pid_pointer));
+  int secretpipe = mkfifo(pid_pointer,0644);
 
- //int private_pipe = mkfifo(pointer,0644);
+  *to_server = open(well_known_pipe,O_WRONLY);
+  write(*to_server,pid_pointer,strlen(pid_pointer));
 
-  //mkfifo(pid,0644);
+  int fromServer = open(pid_pointer, O_RDONLY);
+  char * clientMessage;
+  read(fromServer,clientMessage,8);
+
+  remove(pid_pointer);
+
+  write(*to_server,ACK,sizeof(ACK));
   return from_server;
 }
